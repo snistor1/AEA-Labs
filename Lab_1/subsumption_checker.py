@@ -3,6 +3,7 @@ import networkx as nx
 import matplotlib.pyplot as plt
 from scipy import sparse
 from networkx import bipartite
+from sortnet import outputs
 
 
 def plot_graph(graph):
@@ -181,7 +182,9 @@ def find_cycle(adj, n1):
     return result, path
 
 
-def generate_subsumption_graph_matrix():
+def generate_subsumption_graph_matrix(ca_output: set, cb_output: set):
+    # TODO: generate adjacency matrix
+    # TODO: will need to generate zeros and ones sets
     return list()
 
 
@@ -191,39 +194,17 @@ def check_subsumption(matchings: list, b_output: set):
     # TODO: need to check if any matching is in the output of Cb and if so return false
 
 
-def generate_output_set():
-    return set()
-
-
-def main_subsumption_checker():
-    a_output, b_output = generate_output_set(), generate_output_set()
-    # subsumption_edges = generate_subsumption_graph_matrix()
+def subsumes(ca: set, cb: set):
+    ca_output, cb_output = outputs(ca, len(ca)), outputs(cb, len(cb))
+    subsumption_edges = generate_subsumption_graph_matrix(ca_output, cb_output)
     g = nx.Graph()
-    subsumption_edges = [
-        [(1, 0), (0, 0)],
-        [(1, 0), (0, 1)],
-        [(1, 0), (0, 2)],
-        [(1, 1), (0, 0)],
-        [(1, 2), (0, 2)],
-        [(1, 2), (0, 5)],
-        [(1, 3), (0, 2)],
-        [(1, 3), (0, 3)],
-        [(1, 4), (0, 3)],
-        [(1, 4), (0, 5)],
-        [(1, 5), (0, 2)],
-        [(1, 5), (0, 4)],
-        [(1, 5), (0, 6)],
-        [(1, 6), (0, 1)],
-        [(1, 6), (0, 4)],
-        [(1, 6), (0, 6)]
-    ]
     for edge in subsumption_edges:
         g.add_node(edge[0], bipartite=0)
         g.add_node(edge[1], bipartite=1)
     g.add_edges_from(subsumption_edges)
     all_matches = enum_maximum_matching(g)
-    check_subsumption(all_matches, b_output)
+    return check_subsumption(all_matches, cb_output)
 
 
 if __name__ == '__main__':
-    main_subsumption_checker()
+    pass

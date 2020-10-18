@@ -1,5 +1,6 @@
 import random
 import itertools
+from subsumption_checker import subsumes
 
 
 def compare_swap(lst, i, j):
@@ -41,10 +42,6 @@ def bad(net_outputs, n):
 def f(net, n):
     outs = outputs(net, n)
     return ((2 ** n) * bad(outs, n) + len(outs) - n - 1) / ((n + 1) * (2 ** n - 1))
-
-
-def subsumes(net1, net2):
-    return False
 
 
 def green_filter(n):

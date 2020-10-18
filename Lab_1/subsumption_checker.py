@@ -195,7 +195,7 @@ def generate_output_set():
     return set()
 
 
-def main_checker():
+def main_subsumption_checker():
     a_output, b_output = generate_output_set(), generate_output_set()
     # subsumption_edges = generate_subsumption_graph_matrix()
     g = nx.Graph()
@@ -226,4 +226,4 @@ def main_checker():
 
 
 if __name__ == '__main__':
-    main_checker()
+    main_subsumption_checker()

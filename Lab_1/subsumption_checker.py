@@ -181,12 +181,25 @@ def find_cycle(adj, n1):
     result = any(visit(v) for v in nodes)
     return result, path
 
+def clusters(c, n):
+    out_clusters = {i: set() for i in range(n+1)}
+    for out in outputs(c, n):
+        out_clusters[sum(out)].add(out)
+    return out_clusters
+
+def zeros(c, n):
+    return [tuple(map(min, zip(*v)))
+            for _, v in clusters(c, n).items()]
+
+def ones(c, n):
+    return [tuple(map(max, zip(*v)))
+            for _, v in clusters(c, n).items()]
 
 def generate_subsumption_graph_matrix(ca_output: set, cb_output: set):
     # TODO: generate adjacency matrix
-    # TODO: will need to generate zeros and ones sets
+    print(ca_output)
+    print(cb_output)
     return list()
-
 
 def check_subsumption(matchings: list, b_output: set):
     if len(matchings) == 0:
@@ -194,8 +207,10 @@ def check_subsumption(matchings: list, b_output: set):
     # TODO: need to check if any matching is in the output of Cb and if so return false
 
 
-def subsumes(ca: set, cb: set):
-    ca_output, cb_output = outputs(ca, len(ca)), outputs(cb, len(cb))
+def subsumes(ca: tuple, na: int, cb: tuple, nb: int):
+    ca_output, cb_output = outputs(ca, na), outputs(cb, nb)
+    print(ca_output)
+    print(cb_output)
     subsumption_edges = generate_subsumption_graph_matrix(ca_output, cb_output)
     g = nx.Graph()
     for edge in subsumption_edges:
@@ -207,4 +222,7 @@ def subsumes(ca: set, cb: set):
 
 
 if __name__ == '__main__':
-    pass
+    ca = ((0,1),(2,3),(1,3),(1,4))
+    cb = ((0,1),(2,3),(0,3),(1,4))
+    subsumes(ca, 5, cb, 5)
+

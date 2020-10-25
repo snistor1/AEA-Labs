@@ -1,6 +1,6 @@
 import random
 import itertools
-from subsumption_checker import subsumes
+# from subsumption_checker import subsumes, generate_subsumption_matrix
 
 
 def compare_swap(lst, i, j):
@@ -84,7 +84,6 @@ def sortnet_best(n, k, bound, F=None):
         R[p] = set(sorted_R)
     return R[k]
 
-
 if __name__ == '__main__':
     # print(green_filter(10))
     # print(len(green_filter(10)))
@@ -95,4 +94,8 @@ if __name__ == '__main__':
     # sort(((0,1),(0,2),(1,2)), my_example)
     # print(my_example)
     # get_outputs(((0,4), (1,3), (2,3), (4,1)), 5)
-    print(f(((0, 1), (2, 3), (1, 3), (0, 2), (1, 3)), 4))
+
+    ca = ((0,1),(2,3),(1,3),(1,4))
+    cb = ((0,1),(2,3),(0,3),(1,4))
+    # print(outputs(ca, 5))
+    # print(outputs(cb, 5))

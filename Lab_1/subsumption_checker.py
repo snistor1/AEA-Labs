@@ -3,7 +3,7 @@ import networkx as nx
 import matplotlib.pyplot as plt
 from scipy import sparse
 from networkx import bipartite
-from sortnet import outputs
+from utils import outputs
 
 
 def plot_graph(graph):

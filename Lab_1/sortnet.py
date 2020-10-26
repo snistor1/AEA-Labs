@@ -40,7 +40,9 @@ def green_filter(n):
 
 def sortnet_best(n, k, bound, F=None):
     q = len(F)
-    R = [None] * k
+    R = [None] * (k+1)
+    print(q)
+    print(k+1)
     R[q] = {F}
     print(R)
     for p in range(q + 1, k + 1):
@@ -50,21 +52,40 @@ def sortnet_best(n, k, bound, F=None):
         for C in R[p - 1]:
             for i in range(n-1):
                 for j in range(i + 1, n):
+                    print(i,j)
                     if is_redundant(C + ((i, j),), n):
                         continue
                     C_opt = C + ((i, j),)
                     # TODO: This modifies the set inside the foreach loop
                     # Change this to an index based loop.
-                    for Cp in R[p]:
-                        if subsumes(C_opt, n, Cp, n):
-                            R[p].remove(Cp)
-                        if len(R[p]) >= bound and f(C_opt, n) < f(Cp, n):
-                            x = random.random()
-                            if f(C_opt, n) < x < f(Cp, n):
-                                R[p].remove(Cp)
+                    # for Cp in R[p]:
+                    #     if subsumes(C_opt, n, Cp, n):
+                    #         R[p].remove(Cp)
+                    #     if len(R[p]) >= bound and f(C_opt, n) < f(Cp, n):
+                    #         x = random.random()
+                    #         if f(C_opt, n) < x < f(Cp, n):
+                    #             R[p].remove(Cp)
+                    # Remove all networks subsumed by C* from R_p^n...
+                    R[p] = {Cp for Cp in R[p]
+                            if not subsumes(C_opt, n, Cp, n)}
+                    # ...and networks with a lower value.
+                    new_R = set()
+                    new_R_sz = 0
+                    while R[p]:
+                        Cp = R[p].pop()
+                        if new_R_sz + 1 < bound:
+                            new_R.add(Cp)
+                            new_R_sz += 1
+                        else:
+                            f_C_opt = f(C_opt, n)
+                            f_Cp = f(Cp, n)
+                            if f_C_opt > f_Cp:
+                                x = random.random()
+                                if x < (f_C_opt - f_Cp):
+                                    new_R.add(Cp)
+                                    new_R_sz += 1
+                    R[p] = new_R
                     R[p].add(C_opt)
-        # TODO: This modifies the set inside the foreach loop
-        # Change this to an index based loop.
         for C, Cp in itertools.combinations(R[p], n):
             if subsumes(C, n, Cp, n):
                 R[p].remove(Cp)
@@ -76,7 +97,7 @@ def sortnet_best(n, k, bound, F=None):
 if __name__ == '__main__':
     # print(green_filter(10))
     # print(len(green_filter(10)))
-    sortnet_best(10, 29, 2000, F=green_filter(10))
+    print(sortnet_best(5, 20, 2000, F=green_filter(5)))
 
     # my_example = [1,2,0]
     # print(my_example)

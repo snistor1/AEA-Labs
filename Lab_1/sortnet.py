@@ -2,6 +2,7 @@ import random
 from utils import *
 from subsumption_checker import subsumes, generate_subsumption_graph_matrix
 import warnings
+
 warnings.filterwarnings("ignore")
 
 
@@ -42,12 +43,12 @@ def green_filter(n):
 
 def sortnet_best(n, k, bound, F=None):
     q = len(F) if hasattr(F, "__len__") else 0
-    R = [None] * (k+1)
+    R = [None] * (k + 1)
     R[q] = {F} if F is not None else {tuple()}
     for p in range(q + 1, k + 1):
         R[p] = set()
         for C in R[p - 1]:
-            for i in range(n-1):
+            for i in range(n - 1):
                 for j in range(i + 1, n):
                     if is_redundant(C + ((i, j),), n):
                         continue
@@ -80,6 +81,7 @@ def sortnet_best(n, k, bound, F=None):
         sorted_R = sorted_R[:bound]
         R[p] = set(sorted_R)
     return R
+
 
 if __name__ == '__main__':
     n = 4

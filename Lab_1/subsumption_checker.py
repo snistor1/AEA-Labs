@@ -181,19 +181,23 @@ def find_cycle(adj, n1):
     result = any(visit(v) for v in nodes)
     return result, path
 
+
 def clusters(c_output, n):
-    out_clusters = {i: set() for i in range(n+1)}
+    out_clusters = {i: set() for i in range(n + 1)}
     for out in c_output:
         out_clusters[sum(out)].add(out)
     return out_clusters
+
 
 def zeros(c_out, n):
     return [tuple(map(min, zip(*v)))
             for _, v in clusters(c_out, n).items()]
 
+
 def ones(c_out, n):
     return [tuple(map(max, zip(*v)))
             for _, v in clusters(c_out, n).items()]
+
 
 def generate_subsumption_graph_matrix(ca_output: tuple, na: int,
                                       cb_output: tuple, nb: int):
@@ -208,12 +212,13 @@ def generate_subsumption_graph_matrix(ca_output: tuple, na: int,
             valid = True
             for p in range(nclusters):
                 if (cb_zeros[p][j] - ca_zeros[p][i] == 1
-                    or ca_ones[p][i] - cb_ones[p][j] == 1):
+                        or ca_ones[p][i] - cb_ones[p][j] == 1):
                     valid = False
                     break
             if valid:
-                edges.append((i+1, -(j+1)))
+                edges.append((i + 1, -(j + 1)))
     return edges
+
 
 def check_subsumption(matchings: list, a_output: set, b_output: set):
     # TODO:
@@ -229,19 +234,20 @@ def check_subsumption(matchings: list, a_output: set, b_output: set):
     for i in range(len(matchings)):
         # construct pi(outputs(Ca))
         perm_idxs = [-pi_x for _, pi_x in sorted(matchings[i])]
-        pi_a_output = {tuple(elem[pi_x-1] for pi_x in perm_idxs)
+        pi_a_output = {tuple(elem[pi_x - 1] for pi_x in perm_idxs)
                        for elem in a_output}
         # check if subsets
         if pi_a_output.issubset(b_output):
             return True
     return False
 
+
 def subsumes(ca: tuple, na: int, cb: tuple, nb: int):
     ca_output, cb_output = outputs(ca, na), outputs(cb, nb)
     subsumption_edges = generate_subsumption_graph_matrix(ca_output, na, cb_output, nb)
     g = nx.Graph()
-    g.add_nodes_from(range(1,na+1), bipartite=0)
-    g.add_nodes_from(range(-1,-(nb+1), -1), bipartite=1)
+    g.add_nodes_from(range(1, na + 1), bipartite=0)
+    g.add_nodes_from(range(-1, -(nb + 1), -1), bipartite=1)
     g.add_edges_from(subsumption_edges)
     all_matches = enum_maximum_matching(g)
     return check_subsumption(all_matches, ca_output, cb_output)
@@ -250,8 +256,7 @@ def subsumes(ca: tuple, na: int, cb: tuple, nb: int):
 if __name__ == '__main__':
     # ca = ((0,1),(2,3),(1,3),(1,4))
     # cb = ((0,1),(2,3),(0,3),(1,4))
-    ca = ((0,1),(1,2),(0,3))
-    cb = ((0,1),(0,2),(1,3))
+    ca = ((0, 1), (1, 2), (0, 3))
+    cb = ((0, 1), (0, 2), (1, 3))
     # This is supposed to be true
     print(subsumes(ca, 4, cb, 4))
-

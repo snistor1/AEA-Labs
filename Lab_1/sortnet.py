@@ -41,9 +41,9 @@ def green_filter(n):
 
 
 def sortnet_best(n, k, bound, F=None):
-    q = len(F)
+    q = len(F) if hasattr(F, "__len__") else 0
     R = [None] * (k+1)
-    R[q] = {F}
+    R[q] = {F} if F is not None else {tuple()}
     for p in range(q + 1, k + 1):
         R[p] = set()
         for C in R[p - 1]:
@@ -79,10 +79,13 @@ def sortnet_best(n, k, bound, F=None):
         sorted_R = sorted(R[p], key=lambda r: f(r, n))
         sorted_R = sorted_R[:bound]
         R[p] = set(sorted_R)
-    return R[k]
+    return R
 
 if __name__ == '__main__':
-    n = 8
-    k = 15
+    n = 4
+    k = 5
     bound = 200
-    print(sortnet_best(n, k, bound, F=green_filter(n)))
+    # print(sortnet_best(n, k, bound, F=green_filter(n)))
+    found_sortnets = sortnet_best(n, k, bound)
+    print(found_sortnets)
+    print(found_sortnets[k])

@@ -1,6 +1,8 @@
 import random
 from utils import *
 from subsumption_checker import subsumes, generate_subsumption_graph_matrix
+import warnings
+warnings.filterwarnings("ignore")
 
 
 def is_redundant(net, n):
@@ -41,30 +43,15 @@ def green_filter(n):
 def sortnet_best(n, k, bound, F=None):
     q = len(F)
     R = [None] * (k+1)
-    print(q)
-    print(k+1)
     R[q] = {F}
-    print(R)
     for p in range(q + 1, k + 1):
         R[p] = set()
-        # TODO: This modifies the set inside the foreach loop
-        # Change this to an index based loop.
         for C in R[p - 1]:
             for i in range(n-1):
                 for j in range(i + 1, n):
-                    print(i,j)
                     if is_redundant(C + ((i, j),), n):
                         continue
                     C_opt = C + ((i, j),)
-                    # TODO: This modifies the set inside the foreach loop
-                    # Change this to an index based loop.
-                    # for Cp in R[p]:
-                    #     if subsumes(C_opt, n, Cp, n):
-                    #         R[p].remove(Cp)
-                    #     if len(R[p]) >= bound and f(C_opt, n) < f(Cp, n):
-                    #         x = random.random()
-                    #         if f(C_opt, n) < x < f(Cp, n):
-                    #             R[p].remove(Cp)
                     # Remove all networks subsumed by C* from R_p^n...
                     R[p] = {Cp for Cp in R[p]
                             if not subsumes(C_opt, n, Cp, n)}
@@ -86,26 +73,16 @@ def sortnet_best(n, k, bound, F=None):
                                     new_R_sz += 1
                     R[p] = new_R
                     R[p].add(C_opt)
-        for C, Cp in itertools.combinations(R[p], n):
+        for C, Cp in itertools.combinations(R[p], 2):
             if subsumes(C, n, Cp, n):
                 R[p].remove(Cp)
         sorted_R = sorted(R[p], key=lambda r: f(r, n))
-        sorted_R = sorted_R[:len(sorted_R) - bound]
+        sorted_R = sorted_R[:bound]
         R[p] = set(sorted_R)
     return R[k]
 
 if __name__ == '__main__':
-    # print(green_filter(10))
-    # print(len(green_filter(10)))
-    print(sortnet_best(5, 20, 2000, F=green_filter(5)))
-
-    # my_example = [1,2,0]
-    # print(my_example)
-    # sort(((0,1),(0,2),(1,2)), my_example)
-    # print(my_example)
-    # get_outputs(((0,4), (1,3), (2,3), (4,1)), 5)
-
-    # ca = ((0,1),(2,3),(1,3),(1,4))
-    # cb = ((0,1),(2,3),(0,3),(1,4))
-    # print(outputs(ca, 5))
-    # print(outputs(cb, 5))
+    n = 8
+    k = 15
+    bound = 200
+    print(sortnet_best(n, k, bound, F=green_filter(n)))

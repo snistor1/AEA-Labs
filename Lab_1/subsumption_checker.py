@@ -26,7 +26,7 @@ def enum_maximum_matching(g):
     all_matches = []
 
     # ----------------Find one matching----------------
-    match = bipartite.hopcroft_karp_matching(g)
+    match = bipartite.hopcroft_karp_matching(g, top_nodes=s1)
 
     matchadj = np.zeros(adj.shape).astype('int')
     for kk, vv in match.items():
@@ -181,48 +181,77 @@ def find_cycle(adj, n1):
     result = any(visit(v) for v in nodes)
     return result, path
 
-def clusters(c, n):
+def clusters(c_output, n):
     out_clusters = {i: set() for i in range(n+1)}
-    for out in outputs(c, n):
+    for out in c_output:
         out_clusters[sum(out)].add(out)
     return out_clusters
 
-def zeros(c, n):
+def zeros(c_out, n):
     return [tuple(map(min, zip(*v)))
-            for _, v in clusters(c, n).items()]
+            for _, v in clusters(c_out, n).items()]
 
-def ones(c, n):
+def ones(c_out, n):
     return [tuple(map(max, zip(*v)))
-            for _, v in clusters(c, n).items()]
+            for _, v in clusters(c_out, n).items()]
 
-def generate_subsumption_graph_matrix(ca_output: set, cb_output: set):
-    # TODO: generate adjacency matrix
-    print(ca_output)
-    print(cb_output)
-    return list()
+def generate_subsumption_graph_matrix(ca_output: tuple, na: int,
+                                      cb_output: tuple, nb: int):
+    edges = []
+    ca_zeros = zeros(ca_output, na)
+    cb_zeros = zeros(cb_output, nb)
+    ca_ones = ones(ca_output, na)
+    cb_ones = ones(cb_output, nb)
+    nclusters = len(ca_zeros)
+    for i in range(na):
+        for j in range(nb):
+            valid = True
+            for p in range(nclusters):
+                if (cb_zeros[p][j] - ca_zeros[p][i] == 1
+                    or ca_ones[p][i] - cb_ones[p][j] == 1):
+                    valid = False
+                    break
+            if valid:
+                edges.append((i+1, -(j+1)))
+    return edges
 
-def check_subsumption(matchings: list, b_output: set):
+def check_subsumption(matchings: list, a_output: set, b_output: set):
+    # TODO:
+    # Let Ca and Cb be n channel comparator networks. If there exists 1 ≤ k ≤ n
+    # such that the number of sequences with k 1s in outputs(Ca) is greater than
+    # that in outputs(Cb), then Ca !< Cb. (!< is "not subsumed")
+    #
+    # Experiments show that, in the context of this paper, more than 70% of the
+    # subsumption tests in the application of the Prune algorithm are eliminated
+    # based on [the aforementioned lemma].
     if len(matchings) == 0:
         return False
-    # TODO: need to check if any matching is in the output of Cb and if so return false
-
+    for i in range(len(matchings)):
+        # construct pi(outputs(Ca))
+        perm_idxs = [-pi_x for _, pi_x in sorted(matchings[i])]
+        pi_a_output = {tuple(elem[pi_x-1] for pi_x in perm_idxs)
+                       for elem in a_output}
+        # check if subsets
+        if pi_a_output.issubset(b_output):
+            return True
+    return False
 
 def subsumes(ca: tuple, na: int, cb: tuple, nb: int):
     ca_output, cb_output = outputs(ca, na), outputs(cb, nb)
-    print(ca_output)
-    print(cb_output)
-    subsumption_edges = generate_subsumption_graph_matrix(ca_output, cb_output)
+    subsumption_edges = generate_subsumption_graph_matrix(ca_output, na, cb_output, nb)
     g = nx.Graph()
-    for edge in subsumption_edges:
-        g.add_node(edge[0], bipartite=0)
-        g.add_node(edge[1], bipartite=1)
+    g.add_nodes_from(range(1,na+1), bipartite=0)
+    g.add_nodes_from(range(-1,-(nb+1), -1), bipartite=1)
     g.add_edges_from(subsumption_edges)
     all_matches = enum_maximum_matching(g)
-    return check_subsumption(all_matches, cb_output)
+    return check_subsumption(all_matches, ca_output, cb_output)
 
 
 if __name__ == '__main__':
-    ca = ((0,1),(2,3),(1,3),(1,4))
-    cb = ((0,1),(2,3),(0,3),(1,4))
-    subsumes(ca, 5, cb, 5)
+    # ca = ((0,1),(2,3),(1,3),(1,4))
+    # cb = ((0,1),(2,3),(0,3),(1,4))
+    ca = ((0,1),(1,2),(0,3))
+    cb = ((0,1),(0,2),(1,3))
+    # This is supposed to be true
+    print(subsumes(ca, 4, cb, 4))
 

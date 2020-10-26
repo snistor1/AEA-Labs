@@ -31,8 +31,8 @@ def green_filter(n):
     G = []
     length = 1
     while length < n:
-        for k in range(1, length + 1):
-            for i in range(k, n - length + 1, 2 * length):
+        for k in range(length):
+            for i in range(k, n - length, 2 * length):
                 G.append((i, i + length))
         length *= 2
     return tuple(G)
@@ -43,24 +43,30 @@ def sortnet_best(n, k, bound, F=None):
     R = [None] * k
     R[q] = {F}
     print(R)
-    for p in range(q + 1, k):
+    for p in range(q + 1, k + 1):
         R[p] = set()
+        # TODO: This modifies the set inside the foreach loop
+        # Change this to an index based loop.
         for C in R[p - 1]:
-            for i in range(1, n):
+            for i in range(n-1):
                 for j in range(i + 1, n):
-                    if is_redundant(C + (i, j), n):
+                    if is_redundant(C + ((i, j),), n):
                         continue
-                    C_opt = C + (i, j)
+                    C_opt = C + ((i, j),)
+                    # TODO: This modifies the set inside the foreach loop
+                    # Change this to an index based loop.
                     for Cp in R[p]:
-                        if subsumes(C_opt, Cp):
+                        if subsumes(C_opt, n, Cp, n):
                             R[p].remove(Cp)
                         if len(R[p]) >= bound and f(C_opt, n) < f(Cp, n):
                             x = random.random()
                             if f(C_opt, n) < x < f(Cp, n):
                                 R[p].remove(Cp)
                     R[p].add(C_opt)
+        # TODO: This modifies the set inside the foreach loop
+        # Change this to an index based loop.
         for C, Cp in itertools.combinations(R[p], n):
-            if subsumes(C, Cp):
+            if subsumes(C, n, Cp, n):
                 R[p].remove(Cp)
         sorted_R = sorted(R[p], key=lambda r: f(r, n))
         sorted_R = sorted_R[:len(sorted_R) - bound]
@@ -70,7 +76,7 @@ def sortnet_best(n, k, bound, F=None):
 if __name__ == '__main__':
     # print(green_filter(10))
     # print(len(green_filter(10)))
-    # sortnet_best(10, 29, 2000, F=green_filter(10))
+    sortnet_best(10, 29, 2000, F=green_filter(10))
 
     # my_example = [1,2,0]
     # print(my_example)
@@ -78,7 +84,7 @@ if __name__ == '__main__':
     # print(my_example)
     # get_outputs(((0,4), (1,3), (2,3), (4,1)), 5)
 
-    ca = ((0,1),(2,3),(1,3),(1,4))
-    cb = ((0,1),(2,3),(0,3),(1,4))
+    # ca = ((0,1),(2,3),(1,3),(1,4))
+    # cb = ((0,1),(2,3),(0,3),(1,4))
     # print(outputs(ca, 5))
     # print(outputs(cb, 5))

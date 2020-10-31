@@ -221,14 +221,6 @@ def generate_subsumption_graph_matrix(ca_output: tuple, na: int,
 
 
 def check_subsumption(matchings: list, a_output: set, b_output: set):
-    # TODO:
-    # Let Ca and Cb be n channel comparator networks. If there exists 1 ≤ k ≤ n
-    # such that the number of sequences with k 1s in outputs(Ca) is greater than
-    # that in outputs(Cb), then Ca !< Cb. (!< is "not subsumed")
-    #
-    # Experiments show that, in the context of this paper, more than 70% of the
-    # subsumption tests in the application of the Prune algorithm are eliminated
-    # based on [the aforementioned lemma].
     if len(matchings) == 0:
         return False
     for i in range(len(matchings)):
@@ -244,6 +236,16 @@ def check_subsumption(matchings: list, a_output: set, b_output: set):
 
 def subsumes(ca: tuple, na: int, cb: tuple, nb: int):
     ca_output, cb_output = outputs(ca, na), outputs(cb, nb)
+    if len(ca_output) > len(cb_output):
+        return False
+    ca_clusters, cb_clusters = clusters(ca_output, na), clusters(cb_output, nb)
+    ca_zeros, cb_zeros = zeros(ca_output, na), zeros(cb_output, nb)
+    ca_ones, cb_ones = ones(ca_output, na), ones(cb_output, nb)
+    for p in range(min(na, nb) + 1):
+        if (len(ca_clusters[p]) > len(cb_clusters[p]) or
+            len(ca_zeros[p]) > len(cb_zeros[p]) or
+            len(ca_ones[p]) > len(cb_ones[p])):
+            return False
     subsumption_edges = generate_subsumption_graph_matrix(ca_output, na, cb_output, nb)
     g = nx.Graph()
     g.add_nodes_from(range(1, na + 1), bipartite=0)
@@ -259,4 +261,5 @@ if __name__ == '__main__':
     ca = ((0, 1), (1, 2), (0, 3))
     cb = ((0, 1), (0, 2), (1, 3))
     # This is supposed to be true
+    print(clusters(outputs(ca, 4), 4))
     print(subsumes(ca, 4, cb, 4))

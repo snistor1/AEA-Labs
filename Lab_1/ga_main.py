@@ -21,8 +21,10 @@ def generate_input_population() -> list:
     return [np.random.randint(2, size=NETWORK_SIZE) for _ in range(INPUT_POP_SIZE)]
 
 
-def eval_input(network, input_test_case) -> int:
-    pass
+def eval_input(network, input_test_case) -> bool:
+    for comparator in network:
+        input_test_case[[comparator[0], comparator[1]]] = input_test_case[[comparator[1], comparator[0]]]
+    return np.all(input_test_case[:-1] <= input_test_case[1:])
 
 
 def fitness_networks(population: list, input_population: list) -> list:

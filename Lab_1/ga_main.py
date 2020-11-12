@@ -58,7 +58,7 @@ def upgrade_input(input_population: list) -> list:
     pass
 
 
-def selection(population: list, fitness_values: list, elitism=False, base=0.95) -> list:
+def selection(population: list, fitness_values: list, elitism_nr=0, base=0.95) -> list:
     sorted_indices = np.argsort(fitness_values)[::-1]
     inverse_perm = np.argsort(sorted_indices)
     new_fitness = base ** np.arange(sorted_indices.size)
@@ -66,12 +66,11 @@ def selection(population: list, fitness_values: list, elitism=False, base=0.95) 
     total_fitness = sum(new_fitness)
     individual_probabilities = [fitness_val / total_fitness for fitness_val in new_fitness]
     cumulative_probabilities = np.cumsum(individual_probabilities)
-    if not elitism:
+    if not elitism_nr:
         r = np.random.rand(POP_SIZE)
         selected = np.searchsorted(cumulative_probabilities, r)
         new_population = [population[idx] for idx in selected]
     else:
-        elitism_nr = int(POP_SIZE * 0.1)
         best_fitness_values = sorted(fitness_values, reverse=True)[:elitism_nr]
         chosen_elitism_values = [np.where(fitness_values == i)[0][0] for i in best_fitness_values]
         r = np.random.rand(POP_SIZE - elitism_nr)
@@ -91,8 +90,8 @@ def main():
     best_input_val, best_input_individual = get_best_individual(input_population, input_fitness_values)
     for i in range(NR_EPOCHS):
         print(f'Current epoch: {i}')
-        population = selection(population, fitness_values, elitism=USE_ELITISM)
-        input_population = selection(input_population, input_fitness_values, elitism=USE_ELITISM)
+        population = selection(population, fitness_values, elitism_nr=ELITISM_NR)
+        input_population = selection(input_population, input_fitness_values)
         population = upgrade(population)
         input_population = upgrade_input(input_population)
         fitness_values = fitness_networks(population, input_population)

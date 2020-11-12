@@ -11,7 +11,7 @@ def generate_population() -> list:
         network = list()
         for _ in range(nr_comparators):
             first = np.random.randint(NETWORK_SIZE)
-            second = np.random.choice([i for i in range(16) if i != first])
+            second = np.random.choice([i for i in range(NETWORK_SIZE) if i != first])
             network.append((first, second))
         population.append(network)
     return population
@@ -51,10 +51,20 @@ def get_best_individual(population, fitness_values) -> (float, list):
 
 
 def upgrade(population: list) -> list:
-    pass
+    new_population = list()
+    for individual in population:
+        r = np.random.rand()
+        if r < MUTATION_PROB:
+            first = np.random.randint(len(individual))
+            second = np.random.choice([i for i in range(len(individual)) if i != first])
+            individual[first], individual[second] = individual[second], individual[first]
+
+    # TODO: Cross-over
+    return new_population
 
 
 def upgrade_input(input_population: list) -> list:
+    # TODO: Something? Anything?!
     pass
 
 

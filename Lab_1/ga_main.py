@@ -5,11 +5,20 @@ from ga_defines import *
 
 
 def generate_population() -> list:
-    pass
+    population = list()
+    for _ in range(POP_SIZE):
+        nr_comparators = np.random.randint(60, 121)
+        network = list()
+        for _ in range(nr_comparators):
+            first = np.random.randint(NETWORK_SIZE)
+            second = np.random.choice([i for i in range(16) if i != first])
+            network.append((first, second))
+        population.append(network)
+    return population
 
 
 def generate_input_population() -> list:
-    pass
+    return [np.random.randint(2, size=NETWORK_SIZE) for _ in range(INPUT_POP_SIZE)]
 
 
 def eval_input(network, input_test_case) -> int:

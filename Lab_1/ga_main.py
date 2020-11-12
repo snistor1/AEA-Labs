@@ -8,8 +8,28 @@ def generate_population() -> list:
     pass
 
 
-def fitness_network(population: list) -> list:
+def generate_input_population() -> list:
     pass
+
+
+def eval_input(network, input_test_case) -> int:
+    pass
+
+
+def fitness_networks(population: list, input_population: list) -> list:
+    fitness_values = list()
+    for network in population:
+        fitness = sum([eval_input(network, test_case) for test_case in input_population]) / len(input_population)
+        fitness_values.append(fitness)
+    return fitness_values
+
+
+def fitness_input(input_population: list, population: list) -> list:
+    fitness_values = list()
+    for test_case in input_population:
+        fitness = len(population) / sum([eval_input(network, test_case) for network in population])
+        fitness_values.append(fitness)
+    return fitness_values
 
 
 def get_best_individual(population, fitness_values) -> (float, list):
@@ -20,6 +40,10 @@ def get_best_individual(population, fitness_values) -> (float, list):
 
 
 def upgrade(population: list) -> list:
+    pass
+
+
+def upgrade_input(input_population: list) -> list:
     pass
 
 
@@ -49,19 +73,31 @@ def selection(population: list, fitness_values: list, elitism=False, base=0.95) 
 def main():
     start_time = time.time()
     population = generate_population()
-    fitness_values = fitness_network(population)
+    input_population = generate_input_population()
+    fitness_values = fitness_networks(population, input_population)
+    input_fitness_values = fitness_input(input_population, population)
     best_val, best_individual = get_best_individual(population, fitness_values)
+    best_input_val, best_input_individual = get_best_individual(input_population, input_fitness_values)
     for i in range(NR_EPOCHS):
         print(f'Current epoch: {i}')
         population = selection(population, fitness_values, elitism=USE_ELITISM)
+        input_population = selection(input_population, input_fitness_values, elitism=USE_ELITISM)
         population = upgrade(population)
-        fitness_values = fitness_network(population)
+        input_population = upgrade_input(input_population)
+        fitness_values = fitness_networks(population, input_population)
+        input_fitness_values = fitness_input(input_population, population)
         new_best_val, new_best_individual = get_best_individual(population, fitness_values)
+        new_best_input_val, new_best_input_individual = get_best_individual(input_population, input_fitness_values)
         print(f'Current best: {best_val}')
         print(f'New best: {new_best_val}')
+        print(f'Current input best: {best_input_val}')
+        print(f'New input best: {new_best_input_val}')
         if new_best_val > best_val:
             best_val = new_best_val
             best_individual = new_best_individual
+        if new_best_input_val > best_input_val:
+            best_input_val = new_best_input_val
+            best_input_individual = new_best_input_individual
     print(f'The best loss was {best_val}!')
     print(f'Time taken: {time.time() - start_time} seconds!')
     print(best_individual)

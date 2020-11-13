@@ -40,7 +40,7 @@ def fitness_networks(population: list, input_population: list) -> list:
 def fitness_input(input_population: list, population: list) -> list:
     fitness_values = list()
     for test_case in input_population:
-        fitness = len(population) / sum([eval_input(network, test_case) for network in population])
+        fitness = 1 - sum([eval_input(network, test_case) for network in population]) / len(population)
         fitness_values.append(fitness)
     return fitness_values
 
@@ -84,7 +84,7 @@ def upgrade_input(input_population: list) -> list:
         del crossover_indices[-1]
     for i in range(0, len(crossover_indices), 2):
         idx_1, idx_2 = crossover_indices[i], crossover_indices[i + 1]
-        cut_point = NETWORK_SIZE / 2
+        cut_point = NETWORK_SIZE // 2
         new_ind_1 = new_population[idx_1][:cut_point] + new_population[idx_2][cut_point:]
         new_ind_2 = new_population[idx_2][:cut_point] + new_population[idx_1][cut_point:]
         new_population[idx_1], new_population[idx_2] = copy.deepcopy(new_ind_1), copy.deepcopy(new_ind_2)

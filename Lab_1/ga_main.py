@@ -85,8 +85,8 @@ def upgrade_input(input_population: list) -> list:
     for i in range(0, len(crossover_indices), 2):
         idx_1, idx_2 = crossover_indices[i], crossover_indices[i + 1]
         cut_point = NETWORK_SIZE // 2
-        new_ind_1 = new_population[idx_1][:cut_point] + new_population[idx_2][cut_point:]
-        new_ind_2 = new_population[idx_2][:cut_point] + new_population[idx_1][cut_point:]
+        new_ind_1 = np.concatenate([new_population[idx_1][:cut_point], new_population[idx_2][cut_point:]])
+        new_ind_2 = np.concatenate([new_population[idx_2][:cut_point], new_population[idx_1][cut_point:]])
         new_population[idx_1], new_population[idx_2] = copy.deepcopy(new_ind_1), copy.deepcopy(new_ind_2)
     return new_population
 
@@ -113,7 +113,7 @@ def selection(population: list, fitness_values: list, elitism_nr=0, base=0.95) -
     return new_population
 
 
-def main(log_to_file=True):
+def main():
     start_time = time.time()
     population = generate_population()
     input_population = generate_input_population()
@@ -121,9 +121,10 @@ def main(log_to_file=True):
     input_fitness_values = fitness_input(input_population, population)
     best_val, best_individual = get_best_individual(population, fitness_values)
     best_input_val, best_input_individual = get_best_individual(input_population, input_fitness_values)
-    fp = open('log.txt', 'w') if log_to_file else sys.stdout
+    fp = open('log.txt', 'a')
     for i in range(NR_EPOCHS):
         print(f'Current epoch: {i}', file=fp)
+        print(f'Current epoch: {i}')
         population = selection(population, fitness_values, elitism_nr=ELITISM_NR)
         input_population = selection(input_population, input_fitness_values)
         population = upgrade(population)
@@ -133,9 +134,13 @@ def main(log_to_file=True):
         new_best_val, new_best_individual = get_best_individual(population, fitness_values)
         new_best_input_val, new_best_input_individual = get_best_individual(input_population, input_fitness_values)
         print(f'Current best: {best_val}', file=fp)
+        print(f'Current best: {best_val}')
         print(f'New best: {new_best_val}', file=fp)
+        print(f'New best: {new_best_val}')
         print(f'Current input best: {best_input_val}', file=fp)
+        print(f'Current input best: {best_input_val}')
         print(f'New input best: {new_best_input_val}', file=fp)
+        print(f'New input best: {new_best_input_val}')
         if new_best_val > best_val:
             best_val = new_best_val
             best_individual = new_best_individual
@@ -143,9 +148,14 @@ def main(log_to_file=True):
             best_input_val = new_best_input_val
             best_input_individual = new_best_input_individual
     print(f'The best loss was {best_val}!', file=fp)
+    print(f'The best loss was {best_val}!')
     print(f'Best individual: {best_individual}', file=fp)
+    print(f'Best individual: {best_individual}')
     print(f'Best input individual: {best_input_individual}', file=fp)
+    print(f'Best input individual: {best_input_individual}')
     print(f'Time taken: {time.time() - start_time} seconds!', file=fp)
+    print(f'Time taken: {time.time() - start_time} seconds!')
+    fp.close()
 
 
 if __name__ == '__main__':

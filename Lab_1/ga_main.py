@@ -60,6 +60,16 @@ def upgrade(population: list) -> list:
             first = np.random.randint(len(individual))
             second = np.random.choice([i for i in range(len(individual)) if i != first])
             individual[first], individual[second] = individual[second], individual[first]
+        if r < BETTER_MUTATION_PROB:
+            choice = np.random.randint(2)
+            if choice == 0:
+                to_remove = np.random.randint(len(individual))
+                del individual[to_remove]
+            else:
+                first = np.random.randint(NETWORK_SIZE)
+                second = np.random.choice([i for i in range(NETWORK_SIZE) if i != first])
+                index_to_add = np.random.randint(len(individual) + 1)
+                individual.insert(index_to_add, (first, second))
         new_population.append(individual)
 
     crossover_indices = [i for i in range(len(new_population)) if np.random.rand() < CROSS_OVER_PROB]

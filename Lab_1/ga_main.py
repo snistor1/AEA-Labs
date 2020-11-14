@@ -1,4 +1,3 @@
-import sys
 import time
 import copy
 import numpy as np
@@ -57,12 +56,14 @@ def upgrade(population: list) -> list:
     for individual in population:
         r = np.random.rand()
         if r < MUTATION_PROB:
-            first = np.random.randint(len(individual))
-            second = np.random.choice([i for i in range(len(individual)) if i != first])
-            individual[first], individual[second] = individual[second], individual[first]
-        if r < BETTER_MUTATION_PROB:
-            choice = np.random.randint(2)
-            if choice == 0:
+            mutation_procedure = np.random.rand()
+            probabilities = np.cumsum(MUTATION_CASES)
+            selected = np.searchsorted(probabilities, mutation_procedure)
+            if selected == 0:
+                first = np.random.randint(len(individual))
+                second = np.random.choice([i for i in range(len(individual)) if i != first])
+                individual[first], individual[second] = individual[second], individual[first]
+            elif selected == 1:
                 to_remove = np.random.randint(len(individual))
                 del individual[to_remove]
             else:

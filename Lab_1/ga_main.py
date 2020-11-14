@@ -53,11 +53,11 @@ def get_best_individual(population, fitness_values) -> (float, list):
 
 def upgrade(population: list) -> list:
     new_population = list()
+    probabilities = np.cumsum(MUTATION_CASES)
     for individual in population:
         r = np.random.rand()
         if r < MUTATION_PROB:
             mutation_procedure = np.random.rand()
-            probabilities = np.cumsum(MUTATION_CASES)
             selected = np.searchsorted(probabilities, mutation_procedure)
             if selected == 0:
                 first = np.random.randint(len(individual))

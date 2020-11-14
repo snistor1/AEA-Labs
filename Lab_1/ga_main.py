@@ -132,8 +132,11 @@ def main():
     input_fitness_values = fitness_input(input_population, population)
     best_val, best_individual = get_best_individual(population, fitness_values)
     best_input_val, best_input_individual = get_best_individual(input_population, input_fitness_values)
-    fp = open('log.txt', 'a')
+    fp = open('log.txt', 'w')
     for i in range(NR_EPOCHS):
+        if (i + 1) % 10 == 0:
+            fp.close()
+            fp = open('log.txt', 'a')
         print(f'Current epoch: {i}', file=fp)
         print(f'Current epoch: {i}')
         population = selection(population, fitness_values, elitism_nr=ELITISM_NR)

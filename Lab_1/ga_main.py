@@ -64,8 +64,14 @@ def upgrade(population: list) -> list:
                 second = np.random.choice([i for i in range(len(individual)) if i != first])
                 individual[first], individual[second] = individual[second], individual[first]
             elif selected == 1:
-                to_remove = np.random.randint(len(individual))
-                del individual[to_remove]
+                if len(individual) < 4:
+                    first = np.random.randint(NETWORK_SIZE)
+                    second = np.random.choice([i for i in range(NETWORK_SIZE) if i != first])
+                    index_to_add = np.random.randint(len(individual) + 1)
+                    individual.insert(index_to_add, (first, second))
+                else:
+                    to_remove = np.random.randint(len(individual))
+                    del individual[to_remove]
             else:
                 first = np.random.randint(NETWORK_SIZE)
                 second = np.random.choice([i for i in range(NETWORK_SIZE) if i != first])

@@ -8,11 +8,13 @@ from ga_defines import *
 def generate_population() -> list:
     population = list()
     for _ in range(POP_SIZE):
-        nr_comparators = np.random.randint(60, 121)
+        nr_comparators = np.random.randint(3, 20)
         network = list()
         for _ in range(nr_comparators):
             first = np.random.randint(NETWORK_SIZE)
             second = np.random.choice([i for i in range(NETWORK_SIZE) if i != first])
+            if first > second:
+                first, second = second, first
             network.append((first, second))
         population.append(network)
     return population
@@ -24,6 +26,7 @@ def generate_input_population() -> list:
 
 def eval_input(network, input_test_case) -> bool:
     for comparator in network:
+        # if input_test_case[comparator[0]] > input_test_case[comparator[1]]:
         input_test_case[[comparator[0], comparator[1]]] = input_test_case[[comparator[1], comparator[0]]]
     return np.all(input_test_case[:-1] <= input_test_case[1:])
 
@@ -62,11 +65,18 @@ def upgrade(population: list) -> list:
             if selected == 0:
                 first = np.random.randint(len(individual))
                 second = np.random.choice([i for i in range(len(individual)) if i != first])
-                individual[first], individual[second] = individual[second], individual[first]
+                f0 = individual[first][0]
+                f1 = individual[first][1]
+                s0 = individual[second][0]
+                s1 = individual[second][1]
+                individual[first] = (s0, f1) if s0 <= f1 else (f1, s0)
+                individual[second] = (f0, s1) if f0 <= s1 else (s1, f0)
             elif selected == 1:
                 if len(individual) < 4:
                     first = np.random.randint(NETWORK_SIZE)
                     second = np.random.choice([i for i in range(NETWORK_SIZE) if i != first])
+                    if first > second:
+                        first, second = second, first
                     index_to_add = np.random.randint(len(individual) + 1)
                     individual.insert(index_to_add, (first, second))
                 else:
@@ -141,8 +151,7 @@ def main():
     fp = open('log.txt', 'w')
     for i in range(NR_EPOCHS):
         if (i + 1) % 10 == 0:
-            fp.close()
-            fp = open('log.txt', 'a')
+            fp.flush()
         print(f'Current epoch: {i}', file=fp)
         print(f'Current epoch: {i}')
         population = selection(population, fitness_values, elitism_nr=ELITISM_NR)
@@ -154,13 +163,9 @@ def main():
         new_best_val, new_best_individual = get_best_individual(population, fitness_values)
         new_best_input_val, new_best_input_individual = get_best_individual(input_population, input_fitness_values)
         print(f'Current best: {best_val}', file=fp)
-        print(f'Current best: {best_val}')
         print(f'New best: {new_best_val}', file=fp)
-        print(f'New best: {new_best_val}')
         print(f'Current input best: {best_input_val}', file=fp)
-        print(f'Current input best: {best_input_val}')
         print(f'New input best: {new_best_input_val}', file=fp)
-        print(f'New input best: {new_best_input_val}')
         if new_best_val > best_val:
             best_val = new_best_val
             best_individual = new_best_individual

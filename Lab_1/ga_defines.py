@@ -1,3 +1,5 @@
+import platform
+
 N_EPOCHS = 50
 NET_MUTATION_P = 0.02
 NET_MUTATION_CASES = [0.7, 0.15, 0.15]
@@ -8,3 +10,4 @@ IN_CROSSOVER_P = 0.4
 IN_POP_SIZE = 100
 NETWORK_SIZE = 8
 N_ELITISM = 15
+PACKING = 'q' if platform.uname().machine == 'AMD64' else 'l'

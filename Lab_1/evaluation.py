@@ -1,6 +1,7 @@
 import multiprocessing as mproc
 
 import numpy as np
+from ga_defines import PACKING
 
 
 global_mp_vars = {}
@@ -33,7 +34,7 @@ def evaluate(population: list, input_population: list,
     net_pop_size = len(population)
     input_pop_size = len(input_population)
     if multiprocessing:
-        shared_matrix = mproc.RawArray('l', net_pop_size * input_pop_size)
+        shared_matrix = mproc.RawArray(PACKING, net_pop_size * input_pop_size)
         fit_matrix = np.frombuffer(shared_matrix) \
                        .reshape((net_pop_size, input_pop_size))
         n_procs = mproc.cpu_count()

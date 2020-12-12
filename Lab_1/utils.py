@@ -45,13 +45,15 @@ class DispatchingFormatter:
 
 
 class PlotContext:
-    def __init__(self, n_plots, title=None, labels=None,
-                 colors=None, line_styles=None):
+    def __init__(self, n_plots, title=None, xlabel=None,
+                 ylabel=None, labels=None, colors=None,
+                 line_styles=None):
         self.n_plots = n_plots
         self.title = title
+        self.xlabel = xlabel
+        self.ylabel = ylabel
         # Configure pyplot figure and axes objects
         self.fig, self.ax = self.__setup_plot(n_plots, labels, colors, line_styles)
-        self.__configure_legend()
 
     def __setup_plot(self, n_plots, labels, colors, line_styles):
         plt.ion()
@@ -69,11 +71,11 @@ class PlotContext:
             ax.plot([0], [0], linestyle=ls, color=c, label=label)
         ax.legend()
         ax.set_title(self.title)
+        ax.set_xlabel(self.xlabel)
+        ax.set_ylabel(self.ylabel)
+        ax.grid()
         fig.canvas.draw_idle()
         return fig, ax
-
-    def __configure_legend(self):
-        pass
 
     def plot(self, i, data):
         new_x = np.arange(i+1)

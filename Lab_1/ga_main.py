@@ -1,3 +1,5 @@
+import sys
+import argparse
 import time
 import copy
 import itertools
@@ -13,9 +15,16 @@ from selection.strategies import Strategy, RankBased, Roulette, SUS
 from evaluation.evaluation_cy import evaluate
 from operators.operators_cy import upgrade_net, upgrade_input
 from utils import PlotContext
-from utils import collect_and_log_fitness, setup_logging
+from utils import collect, setup_logging
 from ga_defines import *
 
+
+plot_config = {
+    'net_mean': ('Mean network fitness (relative)', 'blue', '-'),
+    'test_mean': ('Mean network fitness (absolute)', 'green', '-'),
+    'global_max_rel': ('Global best network fitness (relative)', 'red', '--'),
+    'global_max_abs': ('Global best network fitness (absolute)', 'darkorange', '--')
+}
 
 def initialize_networks(min_c=MIN_COMPARATORS, max_c=MAX_COMPARATORS):
     """
@@ -38,7 +47,7 @@ def initialize_networks(min_c=MIN_COMPARATORS, max_c=MAX_COMPARATORS):
         rng.random((NET_POP_SIZE * (MAX_COMPARATORS + 1), NETWORK_SIZE)),
         2,
         axis=-1
-    )[:, :2].reshape((networks_shape))
+    )[:, :2].reshape((networks_shape)).astype(np.int64)
     # Randomly generate the number of comparators each individual should have,
     # which is in the interval [min_c, max_c].
     n_comparators = rng.integers(min_c,
@@ -64,7 +73,7 @@ def initialize_inputs():
     """
     rng = np.random.default_rng(seed=0)
     size = INPUT_POP_SIZE * NETWORK_SIZE
-    return rng.integers(0, 2, size=size) \
+    return rng.integers(0, 2, size=size, dtype=np.int64) \
               .reshape((INPUT_POP_SIZE, -1))
 
 
@@ -75,14 +84,19 @@ def initialize_all_inputs():
     domain = np.repeat(np.array([[0, 1]]), NETWORK_SIZE, axis=0)
     return np.array(
         np.meshgrid(*domain)
-    ).T.reshape(-1, NETWORK_SIZE)
+    ).T.reshape(-1, NETWORK_SIZE).astype(np.int64)
 
 
-def get_best_individual(population, fitness_values):
-    local_best = np.argmax(fitness_values)
-    best_val = fitness_values[local_best]
-    best_individual = population[local_best]
-    return best_val, best_individual
+def get_best_values(net_population, net_fitness, test_fitness=None):
+    rel_best_idx = np.argmax(net_fitness)
+    rel_val, rel_individual = (net_fitness[rel_best_idx],
+                               net_population[rel_best_idx])
+    if test_fitness is not None:
+        abs_best_idx = np.argmax(test_fitness)
+        abs_val, abs_individual = (test_fitness[abs_best_idx],
+                                   net_population[abs_best_idx])
+        return ((rel_val, rel_individual), (abs_val, abs_individual))
+    return ((rel_val, rel_individual), (None, None))
 
 
 def selection(population, fitness_values,
@@ -90,81 +104,185 @@ def selection(population, fitness_values,
     return strategy(population, fitness_values)
 
 
-def main():
-    setup_logging(log_level=logging.INFO)
-    context = PlotContext(2,
-                          title='Network fitness (relative)',
-                          xlabel='Iterations',
-                          ylabel='Fitness',
-                          labels=['Mean network fitness (relative)',
-                                  # 'Mean network fitness (absolute)',
-                                  'Global best network fitness (relative)'],
-                                  # 'Global best network fitness (absolute)'],
-                          colors=['blue', 'red'],
-                          line_styles=['-', '-'])
-    logger = logging.getLogger('general')
-    columns = ['net_max', 'net_mean', 'net_std',
-               'input_max', 'input_mean', 'input_std']
-               # 'test_max', 'test_mean', 'test_std']
-    fitness_stats = pd.DataFrame(columns=columns)
-    global_max_rel = []
-    global_max_abs = []
-    net_strategy = RankBased(0.995)
-    input_strategy = Roulette()
+def get_plot_context(active_dict):
+    n_plots = sum(active_dict.values())
+    labels, colors, line_styles = zip(*[plot_config[k]
+                                       for k in active_dict
+                                       if active_dict[k]])
+    return PlotContext(n_plots,
+                       title='Network fitness',
+                       xlabel='Iterations',
+                       ylabel='Fitness',
+                       labels=labels,
+                       colors=colors,
+                       line_styles=line_styles)
 
+
+def run_ga_plot(args):
+    # set variables
+    setup_logging()
+    use_test_data = args.absolute or args.global_absolute
+    active_plots = {
+        'net_mean': args.relative,
+        'test_mean': args.absolute,
+        'global_max_rel': args.global_relative,
+        'global_max_abs': args.global_absolute,
+    }
+    logger = logging.getLogger('general')
+    plt_context = get_plot_context(active_plots)
+    fitness_stats = pd.DataFrame(columns=['net_mean', 'net_std',
+                                          'input_mean', 'input_std',
+                                          'test_mean', 'test_std',
+                                          'global_max_rel', 'global_max_abs'])
     start_time = time.time()
-    population = initialize_networks(40, 60)
+    # initialize populations
+    net_population = initialize_networks(3, 20)
     input_population = initialize_inputs()
     test_input_population = initialize_all_inputs()
-    net_fitness, input_fitness = evaluate(population, input_population)
-    # test_net_fitness, _ = evaluate(population, test_input_population)
-    collect_and_log_fitness(net_fitness, input_fitness,
-                            # test_population_fit=test_net_fitness,
-                            collector=fitness_stats)
-    best_val, best_individual = get_best_individual(population, net_fitness)
-    best_input_val, best_input_individual = get_best_individual(input_population, input_fitness)
-    # global_max_abs_fitness, _ = evaluate([best_individual], test_input_population)
-    global_max_rel.append(best_val)
-    # global_max_abs.append(global_max_abs_fitness[0])
-    context.plot(0, (fitness_stats['net_mean'],
-                     # fitness_stats['test_mean'],
-                     global_max_rel
-                     # global_max_abs
-                     ))
+    # go through iteration 0
+    net_fitness, input_fitness = evaluate(net_population, input_population)
+    test_net_fitness = (evaluate(net_population, test_input_population)[0]
+                        if use_test_data
+                        else None)
+    ((rel_val, rel_net),
+     (abs_val, abs_net)) = get_best_values(net_population, net_fitness,
+                                           test_fitness=test_net_fitness)
+    fitness_stats = fitness_stats.append(
+        collect(net_fitness, input_fitness, test_fit=test_net_fitness,
+                global_abs=abs_val, global_rel=rel_val,
+                collector=fitness_stats),
+        ignore_index=True
+    )
+    plt_context.plot(0, (fitness_stats[k]
+                         for k in active_plots
+                         if active_plots[k]))
+    # main loop 1..N_EPOCHS
     for i in range(1, N_EPOCHS+1):
         print(f'Epoch {i}/{N_EPOCHS}')
         logger.info('Current epoch: %d', i)
-        population = selection(population, net_fitness, strategy=net_strategy)
+        net_population = selection(net_population, net_fitness, strategy=NET_STRATEGY)
         input_population = selection(input_population, input_fitness,
-                                     strategy=input_strategy)
-        upgrade_net(population)
+                                     strategy=INPUT_STRATEGY)
+        upgrade_net(net_population)
         upgrade_input(input_population)
-        net_fitness, input_fitness = evaluate(population, input_population)
-        # test_net_fitness, _ = evaluate(population, test_input_population)
-        collect_and_log_fitness(net_fitness, input_fitness,
-                                # test_population_fit=test_net_fitness,
-                                collector=fitness_stats)
-        new_best_val, new_best_individual = get_best_individual(population, net_fitness)
-        new_best_input_val, new_best_input_individual = get_best_individual(input_population, input_fitness)
-        if new_best_val > best_val:
-            best_val = new_best_val
-            best_individual = new_best_individual
-        if new_best_input_val > best_input_val:
-            best_input_val = new_best_input_val
-            best_input_individual = new_best_input_individual
-        # global_max_abs_fitness, _ = evaluate([best_individual], test_input_population)
-        global_max_rel.append(best_val)
-        # global_max_abs.append(global_max_abs_fitness[0])
-        context.plot(i, (fitness_stats['net_mean'],
-                         # fitness_stats['test_mean'],
-                         global_max_rel
-                         # global_max_abs
-                         ))
+        net_fitness, input_fitness = evaluate(net_population, input_population)
+        test_net_fitness = (evaluate(net_population, test_input_population)[0]
+                            if use_test_data
+                            else None)
+        ((new_rel_val, new_rel_net),
+        (new_abs_val, new_abs_net)) = get_best_values(net_population, net_fitness,
+                                                      test_fitness=test_net_fitness)
+        if new_rel_val > rel_val:
+            rel_val = new_rel_val
+            rel_net = new_rel_net
+        if test_net_fitness is not None and new_abs_val > abs_val:
+            abs_val = new_abs_val
+            abs_net = new_abs_net
+        fitness_stats = fitness_stats.append(
+            collect(net_fitness, input_fitness, test_fit=test_net_fitness,
+                    global_abs=abs_val, global_rel=rel_val,
+                    collector=fitness_stats),
+            ignore_index=True
+        )
+        plt_context.plot(i, (fitness_stats[k]
+                             for k in active_plots
+                             if active_plots[k]))
     logger.info('Time elapsed: %f', time.time() - start_time)
-    logger.info('Best network: %s', best_individual)
-    logger.debug('Input population:')
-    logging.getLogger('general.array').debug(pformat(input_population))
+    logger.info('Best network: %s', rel_net)
     plt.waitforbuttonpress()
+
+
+def run_ga_exp(args):
+    setup_logging()
+    # set variables
+    use_test_data = args.use_test_data
+    logger = logging.getLogger('general')
+    fitness_stats = pd.DataFrame(columns=['net_mean', 'net_std',
+                                          'input_mean', 'input_std',
+                                          'test_mean', 'test_std',
+                                          'global_max_rel', 'global_max_abs'])
+    # outer loop
+    for r in range(args.repeats):
+        logger.info('Starting run %d/%d...', r+1, args.repeats)
+        print('Starting run %d/%d...' % (r+1, args.repeats))
+        start_time = time.time()
+        # initialize populations
+        net_population = initialize_networks(3, 20)
+        input_population = initialize_inputs()
+        test_input_population = initialize_all_inputs()
+        # go through iteration 0
+        net_fitness, input_fitness = evaluate(net_population, input_population)
+        test_net_fitness = (evaluate(net_population, test_input_population)[0]
+                            if use_test_data
+                            else None)
+        ((rel_val, rel_net),
+        (abs_val, abs_net)) = get_best_values(net_population, net_fitness,
+                                              test_fitness=test_net_fitness)
+        # main loop 1..N_EPOCHS
+        for i in range(1, N_EPOCHS+1):
+            net_population = selection(net_population, net_fitness, strategy=NET_STRATEGY)
+            input_population = selection(input_population, input_fitness,
+                                         strategy=INPUT_STRATEGY)
+            upgrade_net(net_population)
+            upgrade_input(input_population)
+            net_fitness, input_fitness = evaluate(net_population, input_population)
+            test_net_fitness = (evaluate(net_population, test_input_population)[0]
+                                if use_test_data
+                                else None)
+            ((new_rel_val, new_rel_net),
+            (new_abs_val, new_abs_net)) = get_best_values(net_population, net_fitness,
+                                                          test_fitness=test_net_fitness)
+            if new_rel_val > rel_val:
+                rel_val = new_rel_val
+                rel_net = new_rel_net
+            if test_net_fitness is not None and new_abs_val > abs_val:
+                abs_val = new_abs_val
+                abs_net = new_abs_net
+        fitness_stats = fitness_stats.append(
+            collect(net_fitness, input_fitness, test_fit=test_net_fitness,
+                    global_abs=abs_val, global_rel=rel_val,
+                    collector=fitness_stats),
+            ignore_index=True
+        )
+        logger.info('Time elapsed: %f', time.time() - start_time)
+        logger.info('Best network: %s', rel_net)
+    fitness_stats.to_csv(args.out if args.out is not None else sys.stdout)
+
+
+def parse_opts():
+    parser = argparse.ArgumentParser()
+    subparsers = parser.add_subparsers(help='allowed commands')
+    parser_plot = subparsers.add_parser('plot', help='plot GA iterations')
+    parser_exp = subparsers.add_parser('exp', help='run multiple experiments')
+
+    parser.set_defaults(func=lambda x: parser.print_usage())
+
+    parser_plot.add_argument('-a', '--absolute', action='store_true',
+                        help='absolute mean fitness')
+    parser_plot.add_argument('-r', '--relative', action='store_true',
+                        help='relative mean fitness')
+    parser_plot.add_argument('-g', '--global-absolute', action='store_true',
+                        help='absolute best value')
+    parser_plot.add_argument('-l', '--global-relative', action='store_true',
+                        help='relative best value')
+    parser_plot.set_defaults(func=run_ga_plot)
+
+    parser_exp.add_argument('-r', action='store', metavar='<repeats>',
+                            dest='repeats', type=int,
+                            help='number of times to run the algorithm')
+    parser_exp.add_argument('-o', action='store', metavar='<file>',
+                            dest='out', type=str,
+                            help='''name of output file; if not present, results
+                            will be printed to standard output''')
+    parser_exp.add_argument('-t', '--use-test-data', action='store_true',
+                            help='use all possible inputs instead of a subset')
+    parser_exp.set_defaults(func=run_ga_exp)
+    return parser.parse_args()
+
+
+def main():
+    args = parse_opts()
+    args.func(args)
 
 
 if __name__ == '__main__':

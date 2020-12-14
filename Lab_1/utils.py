@@ -1,5 +1,6 @@
 import itertools
 import logging
+from collections import defaultdict
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -98,50 +99,42 @@ def setup_logging(log_level=logging.INFO):
     logging.getLogger().setLevel(log_level)
 
 
-def get_statistics(network_fit, input_fit, test_population_fit=None):
-    result = ((network_fit.max(), network_fit.mean(), network_fit.std()),
-              (input_fit.max(), input_fit.mean(), input_fit.std()))
-    if test_population_fit is not None:
-        result += ((test_population_fit.max(),
-                    test_population_fit.mean(),
-                    test_population_fit.std()),)
-    return result
+# def get_statistics(network_fit, input_fit, test_population_fit=None):
+#     result = ((network_fit.mean(), network_fit.std()),
+#               (input_fit.mean(), input_fit.std()))
+#     if test_population_fit is not None:
+#         result += ((test_population_fit.mean(),
+#                     test_population_fit.std()),)
+#     return result
 
-def collect_and_log_fitness(network_fit, input_fit,
-                            test_population_fit=None, collector=None):
+def collect(network_fit, input_fit,
+            test_fit=None, global_abs=None,
+            global_rel=None, collector=None):
     log = logging.getLogger('general')
     array_log = logging.getLogger('general.array')
-    stats = get_statistics(network_fit, input_fit,
-                           test_population_fit=test_population_fit)
-    net_max, net_mean, net_std = stats[0]
-    input_max, input_mean, input_std = stats[1]
+    results_dict = defaultdict(lambda: 0.0)
+
+    results_dict['net_mean'] = network_fit.mean()
+    results_dict['net_std'] = network_fit.std()
+    results_dict['input_mean']  = input_fit.mean()
+    results_dict['input_std'] = input_fit.std()
     log.debug('Network fitness:')
     array_log.debug(network_fit)
-    log.info('Network best: %f', net_max)
-    log.info('Mean network fitness: %f', net_mean)
-    log.info('Std. dev. network fitness: %f', net_std)
-    log.info('Input best: %f', input_max)
-    log.info('Mean input fitness: %f', input_mean)
-    log.info('Std. dev. input fitness: %f', input_std)
-    if test_population_fit is not None:
-        test_max, test_mean, test_std = stats[2]
+    log.info('Mean network fitness: %f', results_dict['net_mean'])
+    log.info('Std. dev. network fitness: %f', results_dict['net_std'])
+    log.info('Mean input fitness: %f', results_dict['input_mean'])
+    log.info('Std. dev. input fitness: %f', results_dict['input_std'])
+    if test_fit is not None:
+        results_dict['test_mean'] = test_fit.mean()
+        results_dict['test_std'] = test_fit.std()
         log.debug('Network fitness (on test input):')
-        array_log.debug(test_population_fit)
-        log.info('Network best (on test input): %f', test_max)
-        log.info('Mean network fitness (on test input): %f', test_mean)
-        log.info('Std. dev. network fitness (on test input): %f', test_std)
-    if collector is not None:
-        if isinstance(collector, dict):
-            collector['net_max'].append(net_max)
-            collector['net_mean'].append(net_mean)
-            collector['net_std'].append(net_std)
-            collector['input_max'].append(input_max)
-            collector['input_mean'].append(input_mean)
-            collector['input_std'].append(input_std)
-            if test_population_fit is not None:
-                collector['test_max'].append(test_max)
-                collector['test_mean'].append(test_mean)
-                collector['test_std'].append(test_std)
-        if isinstance(collector, pd.DataFrame):
-            row = np.array([s for stat in stats for s in stat])
-            collector.loc[collector.shape[0]] = row
+        array_log.debug(test_fit)
+        log.info('Mean network fitness (on test input): %f', results_dict['test_mean'])
+        log.info('Std. dev. network fitness (on test input): %f', results_dict['test_std'])
+    if global_rel is not None:
+        results_dict['global_max_rel'] = global_rel
+        log.info('Global maximum (relative): %f', results_dict['global_max_rel'])
+    if global_abs is not None:
+        results_dict['global_max_abs'] = global_abs
+        log.info('Global maximum (aboslute): %f', results_dict['global_max_abs'])
+    return results_dict

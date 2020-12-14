@@ -3,6 +3,7 @@ cimport numpy as np
 cimport cython
 from cython.parallel import prange
 
+
 cdef extern from "<alloca.h>":
     void* alloca(size_t) nogil
 
@@ -40,7 +41,6 @@ cdef double[:, ::1] evaluate_cython(np.int64_t[:, :, ::1] net_population,
     cdef size_t input_pop_size = input_population.shape[0]
     cdef size_t input_case_size = input_population.shape[1]
     cdef np.ndarray fit_matrix = np.empty((net_pop_size, input_pop_size))
-    cdef np.ndarray input_copy_buffer = np.empty((input_case_size,), dtype=np.int64)
     cdef double[:, ::1] fit_view = fit_matrix
     cdef Py_ssize_t i, j
     for i in prange(net_pop_size, nogil=True):

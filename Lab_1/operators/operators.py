@@ -3,6 +3,7 @@ import copy
 import numpy as np
 
 from ga_defines import *
+from ga_main import NET_CROSSOVER_P, NET_MUTATION_P, NETWORK_SIZE, INPUT_MUTATION_P, INPUT_CROSSOVER_P
 
 
 def mutation_indices(n_genes: int, pm: float, K: int = 2) -> np.ndarray:
@@ -110,9 +111,9 @@ def mutate(population: list):
 def upgrade_input(input_population: list) -> list:
     new_population = list()
     for individual in input_population:
-        new_population.append(np.where(np.random.rand(NETWORK_SIZE) < IN_MUTATION_P, 1 - individual, individual))
+        new_population.append(np.where(np.random.rand(NETWORK_SIZE) < INPUT_MUTATION_P, 1 - individual, individual))
 
-    crossover_indices = [i for i in range(len(new_population)) if np.random.rand() < IN_CROSSOVER_P]
+    crossover_indices = [i for i in range(len(new_population)) if np.random.rand() < INPUT_CROSSOVER_P]
     if len(crossover_indices) % 2 != 0:
         del crossover_indices[-1]
     for i in range(0, len(crossover_indices), 2):

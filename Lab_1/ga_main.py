@@ -11,12 +11,32 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 
-from selection.strategies import Strategy, RankBased, Roulette, SUS
+from skopt.space import Integer, Real
+from skopt.utils import use_named_args
+from skopt import gp_minimize
+
+from selection.strategies import RankBased, Roulette, SUS
 from evaluation.evaluation_cy import evaluate
 from operators.operators_cy import upgrade_net, upgrade_input
 from utils import PlotContext
 from utils import collect, setup_logging
 from ga_defines import *
+
+NETWORK_SIZE = 9
+
+NET_MUTATION_P = 0.05
+NET_CROSSOVER_P = 0.6
+NET_STRATEGY = SUS(n_elitism=N_ELITISM)
+NET_POP_SIZE = 10000
+
+INPUT_MUTATION_P = 0.05
+INPUT_CROSSOVER_P = 0.6
+INPUT_STRATEGY = SUS(n_elitism=12)
+
+search_space = [Real(0.0, 1.0, name='net_mutation_p'), Real(0.0, 1.0, name='net_crossover_p'),
+                Real(0.0, 1.0, name='input_mutation_p'), Real(0.0, 1.0, name='input_crossover_p'),
+                Integer(1, 3, name='net_selection'), Integer(1, 3, name='input_selection'),
+                Integer(100, 10000, name='net_pop_size')]
 
 
 plot_config = {
@@ -25,6 +45,7 @@ plot_config = {
     'global_max_rel': ('Global best network fitness (relative)', 'red', '--'),
     'global_max_abs': ('Global best network fitness (absolute)', 'darkorange', '--')
 }
+
 
 def initialize_networks(min_c=MIN_COMPARATORS, max_c=MAX_COMPARATORS):
     """
@@ -163,8 +184,8 @@ def run_ga_plot(args):
         net_population = selection(net_population, net_fitness, strategy=NET_STRATEGY)
         input_population = selection(input_population, input_fitness,
                                      strategy=INPUT_STRATEGY)
-        upgrade_net(net_population)
-        upgrade_input(input_population)
+        upgrade_net(net_population, NETWORK_SIZE, NET_MUTATION_P, NET_CROSSOVER_P)
+        upgrade_input(input_population, INPUT_MUTATION_P, INPUT_CROSSOVER_P)
         net_fitness, input_fitness = evaluate(net_population, input_population)
         test_net_fitness = (evaluate(net_population, test_input_population)[0]
                             if use_test_data
@@ -190,6 +211,68 @@ def run_ga_plot(args):
     logger.info('Time elapsed: %f', time.time() - start_time)
     logger.info('Best network: %s', rel_net)
     plt.waitforbuttonpress()
+
+
+@use_named_args(search_space)
+def run_ga_opt(**params):
+    global NET_MUTATION_P, NET_CROSSOVER_P, INPUT_MUTATION_P, INPUT_CROSSOVER_P
+    global NET_STRATEGY, INPUT_STRATEGY, NET_POP_SIZE
+
+    file = open('auto_tune.txt', 'a')
+    print(params.values())
+    print(params.values(), file=file)
+    NET_MUTATION_P = params['net_mutation_p']
+    NET_CROSSOVER_P = params['net_crossover_p']
+    INPUT_MUTATION_P = params['input_mutation_p']
+    INPUT_CROSSOVER_P = params['input_crossover_p']
+    NET_POP_SIZE = params['net_pop_size']
+    if params['net_selection'] == 1:
+        NET_STRATEGY = RankBased()
+    elif params['net_selection'] == 2:
+        NET_STRATEGY = SUS(n_elitism=int(0.05 * NET_POP_SIZE))
+    else:
+        NET_STRATEGY = Roulette()
+    if params['input_selection'] == 1:
+        INPUT_STRATEGY = RankBased()
+    elif params['input_selection'] == 2:
+        INPUT_STRATEGY = SUS(n_elitism=12)
+    else:
+        INPUT_STRATEGY = Roulette()
+
+    start_time = time.time()
+    # initialize populations
+    net_population = initialize_networks(3, 20)
+    input_population = initialize_inputs()
+    test_input_population = initialize_all_inputs()
+    # go through iteration 0
+    net_fitness, input_fitness = evaluate(net_population, input_population)
+    test_net_fitness = (evaluate(net_population, test_input_population)[0])
+    ((rel_val, rel_net),
+     (abs_val, abs_net)) = get_best_values(net_population, net_fitness,
+                                           test_fitness=test_net_fitness)
+    # main loop 1..N_EPOCHS
+    for i in range(1, N_EPOCHS + 1):
+        net_population = selection(net_population, net_fitness, strategy=NET_STRATEGY)
+        input_population = selection(input_population, input_fitness,
+                                     strategy=INPUT_STRATEGY)
+        upgrade_net(net_population, NETWORK_SIZE, NET_MUTATION_P, NET_CROSSOVER_P)
+        upgrade_input(input_population, INPUT_MUTATION_P, INPUT_CROSSOVER_P)
+        net_fitness, input_fitness = evaluate(net_population, input_population)
+        test_net_fitness = (evaluate(net_population, test_input_population)[0])
+        ((new_rel_val, new_rel_net),
+         (new_abs_val, new_abs_net)) = get_best_values(net_population, net_fitness,
+                                                       test_fitness=test_net_fitness)
+        if new_rel_val > rel_val:
+            rel_val = new_rel_val
+            rel_net = new_rel_net
+        if test_net_fitness is not None and new_abs_val > abs_val:
+            abs_val = new_abs_val
+            abs_net = new_abs_net
+    print(f'RelVal: {rel_val}\nAbsVal: {abs_val}', file=file)
+    print(f'Time elapsed: {time.time() - start_time}', file=file)
+    print(f'Network: {rel_net}', file=file)
+    file.close()
+    return (rel_val + abs_val) / 2
 
 
 def run_ga_exp(args):
@@ -223,8 +306,8 @@ def run_ga_exp(args):
             net_population = selection(net_population, net_fitness, strategy=NET_STRATEGY)
             input_population = selection(input_population, input_fitness,
                                          strategy=INPUT_STRATEGY)
-            upgrade_net(net_population)
-            upgrade_input(input_population)
+            upgrade_net(net_population, NETWORK_SIZE, NET_MUTATION_P, NET_CROSSOVER_P)
+            upgrade_input(input_population, INPUT_MUTATION_P, INPUT_CROSSOVER_P)
             net_fitness, input_fitness = evaluate(net_population, input_population)
             test_net_fitness = (evaluate(net_population, test_input_population)[0]
                                 if use_test_data
@@ -249,11 +332,18 @@ def run_ga_exp(args):
     fitness_stats.to_csv(args.out if args.out is not None else sys.stdout)
 
 
+def auto_optimize(args):
+    result = gp_minimize(run_ga_opt, search_space)
+    print(f'Best Fitness: {result.fun}')
+    print(f'Best params: {result.x}')
+
+
 def parse_opts():
     parser = argparse.ArgumentParser()
     subparsers = parser.add_subparsers(help='allowed commands')
     parser_plot = subparsers.add_parser('plot', help='plot GA iterations')
     parser_exp = subparsers.add_parser('exp', help='run multiple experiments')
+    parser_auto_hyper = subparsers.add_parser('auto_hyper', help='auto optimize hyper-parameters')
 
     parser.set_defaults(func=lambda x: parser.print_usage())
 
@@ -277,6 +367,7 @@ def parse_opts():
     parser_exp.add_argument('-t', '--use-test-data', action='store_true',
                             help='use all possible inputs instead of a subset')
     parser_exp.set_defaults(func=run_ga_exp)
+    parser_auto_hyper.set_defaults(func=auto_optimize)
     return parser.parse_args()
 
 

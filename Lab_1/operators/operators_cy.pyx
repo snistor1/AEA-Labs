@@ -68,21 +68,21 @@ def fast_mutation_indices(n_genes, pm, K=2.0):
             )
             /
             np.log(1 - pm)
-        ).astype(int)
+        ).astype(np.int64)
     )
     return idxs[:np.searchsorted(idxs, n_genes)]
 
 
-def upgrade_net(net_population):
-    crossover_net(net_population)
-    mutate_net(net_population)
+def upgrade_net(net_population, network_size, net_mutation_p, crossover_p):
+    crossover_net(net_population, crossover_p)
+    mutate_net(net_population, net_mutation_p, network_size)
 
 
-def crossover_net(population):
+def crossover_net(population, crossover_p):
     rng = np.random.default_rng()
     n_networks = population.shape[0]
     selected_idxs = (rng.random(n_networks) <
-                     NET_CROSSOVER_P).nonzero()[0]
+                     crossover_p).nonzero()[0]
     rng.shuffle(selected_idxs)
     if selected_idxs.size & 1 != 0:
         selected_idxs = selected_idxs[:-1]
@@ -98,16 +98,16 @@ def crossover_net(population):
     population[selected_idxs] = selected_pop
 
 
-def mutate_net(population):
+def mutate_net(population, net_mutation_p, network_size):
     rng = np.random.default_rng()
     n_networks = population.shape[0]
     # Normalize case probabilities
     cases_cumsum = np.cumsum(np.array(NET_MUTATION_CASES) / np.sum(NET_MUTATION_CASES))
-    if NET_MUTATION_P < NET_FAST_MUTATION_THRESH:
-        selected_idxs = fast_mutation_indices(n_networks, NET_MUTATION_P)
+    if net_mutation_p < NET_FAST_MUTATION_THRESH:
+        selected_idxs = fast_mutation_indices(n_networks, net_mutation_p)
     else:
         selected_idxs = (rng.random(size=n_networks) <
-                         NET_MUTATION_P).nonzero()[0]
+                         net_mutation_p).nonzero()[0]
     case_idxs = np.searchsorted(cases_cumsum, rng.random(selected_idxs.size))
     r_mask = case_idxs == MutationCases.REPLACE
     i_mask = case_idxs == MutationCases.INSERT
@@ -117,7 +117,7 @@ def mutate_net(population):
     selected_net_lengths = np.argmin(population[selected_idxs], axis=1)[:, 0]
     new_comparators = np.sort(
         np.argpartition(
-            rng.random((n_rs + n_is, NETWORK_SIZE)),
+            rng.random((n_rs + n_is, network_size)),
             2,
             axis=-1
         )[:, :2]
@@ -138,16 +138,16 @@ def mutate_net(population):
                        selected_net_lengths[d_mask])
 
 
-def upgrade_input(input_population):
-    crossover_input(input_population)
-    mutate_input(input_population)
+def upgrade_input(input_population, input_mutation_p, crossover_p):
+    crossover_input(input_population, crossover_p)
+    mutate_input(input_population, input_mutation_p)
 
 
-def crossover_input(population):
+def crossover_input(population, crossover_p):
     rng = np.random.default_rng()
     n_inputs = population.shape[0]
     selected_idxs = (rng.random(n_inputs) <
-                     INPUT_CROSSOVER_P).nonzero()[0]
+                     crossover_p).nonzero()[0]
     rng.shuffle(selected_idxs)
     if selected_idxs.size & 1 != 0:
         selected_idxs = selected_idxs[:-1]
@@ -162,12 +162,12 @@ def crossover_input(population):
     population[selected_idxs] = selected_pop
 
 
-def mutate_input(population):
+def mutate_input(population, input_mutation_p):
     rng = np.random.default_rng()
-    if INPUT_MUTATION_P < INPUT_FAST_MUTATION_THRESH:
+    if input_mutation_p < INPUT_FAST_MUTATION_THRESH:
         selected_idxs = fast_mutation_indices(population.size,
-                                              INPUT_MUTATION_P)
+                                              input_mutation_p)
     else:
         selected_idxs = (rng.random(population.size) <
-                         INPUT_MUTATION_P).nonzero()[0]
+                         input_mutation_p).nonzero()[0]
     population.ravel()[selected_idxs] ^= 1

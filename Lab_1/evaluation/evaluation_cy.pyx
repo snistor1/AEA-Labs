@@ -3,8 +3,7 @@ cimport numpy as np
 cimport cython
 from cython.parallel import prange
 
-
-cdef extern from "<alloca.h>":
+cdef extern from "<malloc.h>":   # <alloca.h> on linux / <malloc.h> on windows
     void* alloca(size_t) nogil
 
 @cython.boundscheck(False)

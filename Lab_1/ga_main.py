@@ -5,14 +5,16 @@ import copy
 import itertools
 import logging
 import multiprocessing as mproc
+from abc import ABC
 from pprint import pformat
 
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 
-from skopt.space import Integer, Real
+from skopt.callbacks import EarlyStopper
 from skopt.utils import use_named_args
+from skopt.space import Integer, Real
 from skopt import gp_minimize
 
 from selection.strategies import RankBased, Roulette, SUS
@@ -33,8 +35,8 @@ INPUT_MUTATION_P = 0.05
 INPUT_CROSSOVER_P = 0.6
 INPUT_STRATEGY = SUS(n_elitism=12)
 
-search_space = [Real(0.0, 1.0, name='net_mutation_p'), Real(0.0, 1.0, name='net_crossover_p'),
-                Real(0.0, 1.0, name='input_mutation_p'), Real(0.0, 1.0, name='input_crossover_p'),
+search_space = [Real(0.05, 1.0, name='net_mutation_p'), Real(0.05, 1.0, name='net_crossover_p'),
+                Real(0.05, 1.0, name='input_mutation_p'), Real(0.05, 1.0, name='input_crossover_p'),
                 Integer(1, 3, name='net_selection'), Integer(1, 3, name='input_selection'),
                 Integer(100, 10000, name='net_pop_size')]
 
@@ -45,6 +47,12 @@ plot_config = {
     'global_max_rel': ('Global best network fitness (relative)', 'red', '--'),
     'global_max_abs': ('Global best network fitness (absolute)', 'darkorange', '--')
 }
+
+
+class Stopper(EarlyStopper, ABC):
+
+    def __call__(self, result):
+        return result.fun == 0.0
 
 
 def initialize_networks(min_c=MIN_COMPARATORS, max_c=MAX_COMPARATORS):
@@ -272,7 +280,7 @@ def run_ga_opt(**params):
     print(f'Time elapsed: {time.time() - start_time}', file=file)
     print(f'Network: {rel_net}', file=file)
     file.close()
-    return (rel_val + abs_val) / 2
+    return 1 - ((rel_val + abs_val) / 2)
 
 
 def run_ga_exp(args):
@@ -333,7 +341,7 @@ def run_ga_exp(args):
 
 
 def auto_optimize(args):
-    result = gp_minimize(run_ga_opt, search_space)
+    result = gp_minimize(run_ga_opt, search_space, callback=[Stopper()])
     print(f'Best Fitness: {result.fun}')
     print(f'Best params: {result.x}')
 

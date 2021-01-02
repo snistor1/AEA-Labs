@@ -13,6 +13,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 
 from skopt.callbacks import EarlyStopper
+from skopt.plots import plot_convergence
 from skopt.utils import use_named_args
 from skopt.space import Integer, Real
 from skopt import gp_minimize
@@ -341,9 +342,13 @@ def run_ga_exp(args):
 
 
 def auto_optimize(args):
+    start = time.time()
     result = gp_minimize(run_ga_opt, search_space, callback=[Stopper()])
     print(f'Best Fitness: {result.fun}')
     print(f'Best params: {result.x}')
+    print(f'Time taken: {time.time() - start}')
+    plot_convergence(result)
+    plt.show()
 
 
 def parse_opts():

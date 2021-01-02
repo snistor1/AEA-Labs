@@ -347,7 +347,7 @@ def run_ga_exp(args):
                     if 0 < diff < MUTATION_EPS:
                         print(f'Increasing Mutation')
                         NET_MUTATION_P += MUTATION_INC_RATE
-                    elif diff < MUTATION_EPS < 0:
+                    elif diff < 0:
                         print(f'Decreasing Mutation')
                         NET_MUTATION_P -= MUTATION_INC_RATE
                     last_increase = count

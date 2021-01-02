@@ -285,9 +285,11 @@ def run_ga_opt(**params):
 
 
 def run_ga_exp(args):
+    global NET_MUTATION_P
     setup_logging()
     # set variables
     use_test_data = args.use_test_data
+    use_adaptive_mutation = args.use_adaptive_mutation
     logger = logging.getLogger('general')
     fitness_stats = pd.DataFrame(columns=['net_mean', 'net_std',
                                           'input_mean', 'input_std',
@@ -310,8 +312,13 @@ def run_ga_exp(args):
         ((rel_val, rel_net),
         (abs_val, abs_net)) = get_best_values(net_population, net_fitness,
                                               test_fitness=test_net_fitness)
+        abs_history = [abs_val]
+        last_increase = 0
         # main loop 1..N_EPOCHS
         for i in range(1, N_EPOCHS+1):
+            if use_test_data and abs_val == 1.0:
+                logger.info(f'Finished in %d epochs', i - 1)
+                break
             net_population = selection(net_population, net_fitness, strategy=NET_STRATEGY)
             input_population = selection(input_population, input_fitness,
                                          strategy=INPUT_STRATEGY)
@@ -330,6 +337,21 @@ def run_ga_exp(args):
             if test_net_fitness is not None and new_abs_val > abs_val:
                 abs_val = new_abs_val
                 abs_net = new_abs_net
+
+            if use_test_data and use_adaptive_mutation:
+                abs_history.append(new_abs_val)
+                count = len(abs_history)
+                if count > IMP_WINDOW and NET_MUTATION_P < 0.99 and count - last_increase > IMP_WINDOW:
+                    target = abs_history[-IMP_WINDOW:]
+                    diff = target[-1] - target[0]
+                    if 0 < diff < MUTATION_EPS:
+                        print(f'Increasing Mutation')
+                        NET_MUTATION_P += MUTATION_INC_RATE
+                    elif diff < MUTATION_EPS < 0:
+                        print(f'Decreasing Mutation')
+                        NET_MUTATION_P -= MUTATION_INC_RATE
+                    last_increase = count
+
         fitness_stats = fitness_stats.append(
             collect(net_fitness, input_fitness, test_fit=test_net_fitness,
                     global_abs=abs_val, global_rel=rel_val,
@@ -379,6 +401,8 @@ def parse_opts():
                             will be printed to standard output''')
     parser_exp.add_argument('-t', '--use-test-data', action='store_true',
                             help='use all possible inputs instead of a subset')
+    parser_exp.add_argument('-m', '--use-adaptive-mutation', action='store_true',
+                            help='use adaptive mutation rate')
     parser_exp.set_defaults(func=run_ga_exp)
     parser_auto_hyper.set_defaults(func=auto_optimize)
     return parser.parse_args()

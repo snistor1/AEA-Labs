@@ -27,14 +27,14 @@ from ga_defines import *
 
 NETWORK_SIZE = 9
 
-NET_MUTATION_P = 0.05
-NET_CROSSOVER_P = 0.6
-NET_STRATEGY = SUS(n_elitism=N_ELITISM)
-NET_POP_SIZE = 10000
+NET_MUTATION_P = 0.8971134912294432
+NET_CROSSOVER_P = 1.0
+NET_STRATEGY = RankBased()
+NET_POP_SIZE = 5795
 
 INPUT_MUTATION_P = 0.05
-INPUT_CROSSOVER_P = 0.6
-INPUT_STRATEGY = SUS(n_elitism=12)
+INPUT_CROSSOVER_P = 0.521517484089982
+INPUT_STRATEGY = Roulette()
 
 search_space = [Real(0.05, 1.0, name='net_mutation_p'), Real(0.05, 1.0, name='net_crossover_p'),
                 Real(0.05, 1.0, name='input_mutation_p'), Real(0.05, 1.0, name='input_crossover_p'),
